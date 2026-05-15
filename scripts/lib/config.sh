@@ -45,6 +45,89 @@ sf_config_is_enabled() {
   [[ "$1" == "true" ]]
 }
 
+sf_config_slug() {
+  local value="$1"
+
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  value="$(printf '%s' "$value" | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+
+  if [[ -z "$value" ]]; then
+    value="project"
+  fi
+
+  printf '%s\n' "$value"
+}
+
+sf_config_factory_value() {
+  local config_file="$1"
+  local key="$2"
+  local default_value="${3:-}"
+
+  awk -v key="$key" -v default_value="$default_value" '
+    function trim(s) {
+      sub(/[ \t]*#.*/, "", s)
+      gsub(/^[ \t]+|[ \t]+$/, "", s)
+      gsub(/^"|"$/, "", s)
+      gsub(/^'\''|'\''$/, "", s)
+      return s
+    }
+
+    /^factory:[ \t]*($|#)/ {
+      in_factory = 1
+      next
+    }
+
+    in_factory && /^[^ \t-][^:]*:/ {
+      in_factory = 0
+      next
+    }
+
+    in_factory {
+      line = $0
+      sub(/^[ \t]+/, "", line)
+      split(line, parts, ":")
+      field = trim(parts[1])
+
+      if (field == key) {
+        sub(/^[^:]+:[ \t]*/, "", line)
+        print trim(line)
+        found = 1
+        exit
+      }
+    }
+
+    END {
+      if (!found) {
+        print default_value
+      }
+    }
+  ' "$config_file"
+}
+
+sf_config_project_row_by_name() {
+  local config_file="$1"
+  local project_name="$2"
+  local row
+
+  while IFS= read -r row; do
+    local name=""
+    local enabled=""
+    local path=""
+    local goal_file=""
+    local branch_prefix=""
+    local validation_count=""
+
+    IFS=$'\t' read -r name enabled path goal_file branch_prefix validation_count <<<"$row"
+
+    if [[ "$name" == "$project_name" ]]; then
+      printf '%s\n' "$row"
+      return 0
+    fi
+  done < <(sf_config_project_rows "$config_file")
+
+  return 1
+}
+
 sf_config_project_rows() {
   local config_file="$1"
 
