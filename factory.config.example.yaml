@@ -1,8 +1,17 @@
 # Example Software Factory configuration.
-# Copy this file to factory.config.yaml and customize it for your local machine.
 #
-# factory.config.yaml should not be committed if it contains private paths,
-# project names, or commands specific to your machine.
+# Copy this file to factory.config.yaml and customize it for your machine:
+#
+#   cp factory.config.example.yaml factory.config.yaml
+#
+# factory.config.yaml is intentionally ignored by Git because it can contain
+# private local paths, project names, and machine-specific commands.
+#
+# Supported MVP YAML subset:
+# - Keep the same indentation style shown below.
+# - Use true or false for enabled.
+# - Use absolute paths or ~/ paths.
+# - Put validation commands under validation as a list.
 
 factory:
   tmuxSession: software-factory
@@ -13,6 +22,7 @@ factory:
 
 projects:
   - name: homebase
+    enabled: true
     path: /home/mbait/projects/homebase
     goalFile: GOAL.md
     branchPrefix: codex/night
@@ -24,8 +34,11 @@ projects:
       - Do not deploy to production.
       - Pause if secrets or production credentials are required.
       - Pause if database migrations could destroy data.
+    notes:
+      - Example full-stack app project.
 
   - name: teyvatool
+    enabled: false
     path: /home/mbait/projects/teyvatool
     goalFile: GOAL.md
     branchPrefix: codex/night
@@ -36,4 +49,5 @@ projects:
       - Do not push code automatically.
       - Do not deploy to production.
       - Pause if the requested behavior is unclear.
-
+    notes:
+      - Disabled projects stay documented but are skipped by run scripts.

@@ -11,11 +11,14 @@ Software Factory is a local orchestration layer around Git, tmux, and Codex CLI.
 Each project includes:
 
 - project name
+- enabled/disabled status
 - local path
 - goal file
 - branch prefix
 - validation commands
 - stop conditions
+
+Config parsing lives in `scripts/lib/config.sh` so every script reads project entries the same way.
 
 ## Templates
 
@@ -54,4 +57,3 @@ The factory is designed to keep human review in control.
 - Local config is ignored by Git.
 - Logs and reports are generated locally.
 - Pushing and deployment are not automatic in the MVP.
-
