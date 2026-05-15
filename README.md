@@ -146,6 +146,39 @@ Attach to the running factory:
 tmux attach -t software-factory
 ```
 
+## Morning Review
+
+After a run, generate a morning report:
+
+```bash
+./scripts/summarize.sh
+```
+
+The report is written under `reports/` with a name like:
+
+```txt
+reports/morning-YYYY-MM-DD.md
+```
+
+If a report already exists for that date, the script creates the next available filename instead of overwriting it.
+
+The report includes:
+
+1. Project name and path.
+2. Current branch.
+3. Whether the working tree is clean or dirty.
+4. Changed files.
+5. Recent commits.
+6. Diff stats.
+7. Validation status when a matching log/status file exists.
+8. Recommended next action.
+
+For help:
+
+```bash
+./scripts/summarize.sh --help
+```
+
 ## Project Status
 
 This project is in early MVP planning and setup.
