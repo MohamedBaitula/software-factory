@@ -116,6 +116,36 @@ After launch, attach to the session:
 tmux attach -t software-factory
 ```
 
+## Overnight Runner
+
+Use the night runner when you want to launch every enabled project:
+
+```bash
+./scripts/run-night.sh --dry-run
+```
+
+If the dry run looks right, start the overnight run:
+
+```bash
+./scripts/run-night.sh
+```
+
+The night runner:
+
+1. Reads all projects from `factory.config.yaml`.
+2. Skips projects with `enabled: false`.
+3. Calls `scripts/run-project.sh` for each enabled project.
+4. Uses one shared tmux session.
+5. Uses one tmux window per project.
+6. Continues to the next project if one project fails.
+7. Prints a final launch summary and attach command.
+
+Attach to the running factory:
+
+```bash
+tmux attach -t software-factory
+```
+
 ## Project Status
 
 This project is in early MVP planning and setup.
