@@ -1,0 +1,39 @@
+# Example Software Factory configuration.
+# Copy this file to factory.config.yaml and customize it for your local machine.
+#
+# factory.config.yaml should not be committed if it contains private paths,
+# project names, or commands specific to your machine.
+
+factory:
+  tmuxSession: software-factory
+  reportsDir: reports
+  logsDir: logs
+  defaultBranchPrefix: codex/night
+  codexCommand: codex
+
+projects:
+  - name: homebase
+    path: /home/mbait/projects/homebase
+    goalFile: GOAL.md
+    branchPrefix: codex/night
+    validation:
+      - npm test
+      - npm run build
+    stopConditions:
+      - Do not push code automatically.
+      - Do not deploy to production.
+      - Pause if secrets or production credentials are required.
+      - Pause if database migrations could destroy data.
+
+  - name: teyvatool
+    path: /home/mbait/projects/teyvatool
+    goalFile: GOAL.md
+    branchPrefix: codex/night
+    validation:
+      - npm test
+      - npm run build
+    stopConditions:
+      - Do not push code automatically.
+      - Do not deploy to production.
+      - Pause if the requested behavior is unclear.
+
