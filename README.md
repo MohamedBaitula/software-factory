@@ -57,6 +57,8 @@ Then edit `factory.config.yaml` so each project points to a real local repositor
 
 See [docs/configuration.md](docs/configuration.md) for the supported config fields and examples.
 
+If a command fails, see [docs/troubleshooting.md](docs/troubleshooting.md) for common errors and expected output examples.
+
 ## Environment Doctor
 
 Run the doctor before an overnight session:
@@ -152,6 +154,12 @@ After a run, generate a morning report:
 
 ```bash
 ./scripts/summarize.sh
+```
+
+Preview the report without writing a file:
+
+```bash
+./scripts/summarize.sh --dry-run
 ```
 
 The report is written under `reports/` with a name like:

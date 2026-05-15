@@ -40,6 +40,11 @@ Examples:
   ./scripts/run-night.sh --dry-run
   ./scripts/run-night.sh
 
+Exit codes:
+  0  all enabled projects launched or reused successfully
+  1  one or more enabled projects failed
+  2  invalid command-line usage
+
 Before your first run:
   cp factory.config.example.yaml factory.config.yaml
   edit factory.config.yaml for your local projects
@@ -63,6 +68,11 @@ die() {
   exit 1
 }
 
+usage_error() {
+  printf '[FAIL] %s\n' "$1" >&2
+  exit 2
+}
+
 parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -76,11 +86,11 @@ parse_args() {
         ;;
       -*)
         usage
-        die "unknown option: $1"
+        usage_error "unknown option: $1"
         ;;
       *)
         usage
-        die "run-night does not accept project names; use run-project.sh for one project"
+        usage_error "run-night does not accept project names; use run-project.sh for one project"
         ;;
     esac
   done
