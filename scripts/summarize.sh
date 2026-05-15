@@ -12,13 +12,14 @@ EXAMPLE_CONFIG_FILE="$ROOT_DIR/factory.config.example.yaml"
 source "$SCRIPT_DIR/lib/config.sh"
 
 report_path=""
+dry_run=false
 
 usage() {
   cat <<'EOF'
 Software Factory morning report generator
 
 Usage:
-  ./scripts/summarize.sh
+  ./scripts/summarize.sh [--dry-run]
   ./scripts/summarize.sh --help
 
 What it does:
@@ -27,6 +28,15 @@ What it does:
   - includes branch, Git status, changed files, recent commits, and diff stats
   - includes validation status when a matching status/log file exists
   - recommends a next action for each project
+
+Examples:
+  ./scripts/summarize.sh --dry-run
+  ./scripts/summarize.sh
+
+Exit codes:
+  0  report was generated or dry-run preview succeeded
+  1  blocking setup or config failure
+  2  invalid command-line usage
 
 Before your first run:
   cp factory.config.example.yaml factory.config.yaml
@@ -43,16 +53,32 @@ die() {
   exit 1
 }
 
-parse_args() {
-  if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-    usage
-    exit 0
-  fi
+usage_error() {
+  printf '[FAIL] %s\n' "$1" >&2
+  exit 2
+}
 
-  if [[ "$#" -gt 0 ]]; then
-    usage
-    die "summarize does not accept arguments"
-  fi
+parse_args() {
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --help | -h)
+        usage
+        exit 0
+        ;;
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      -*)
+        usage
+        usage_error "unknown option: $1"
+        ;;
+      *)
+        usage
+        usage_error "summarize does not accept project names"
+        ;;
+    esac
+  done
 }
 
 require_config() {
@@ -68,27 +94,11 @@ require_config() {
 }
 
 report_dir() {
-  local configured_dir
-
-  configured_dir="$(sf_config_factory_value "$CONFIG_FILE" "reportsDir" "reports")"
-
-  if [[ "$configured_dir" = /* ]]; then
-    printf '%s\n' "$configured_dir"
-  else
-    printf '%s/%s\n' "$ROOT_DIR" "$configured_dir"
-  fi
+  sf_config_factory_dir "$CONFIG_FILE" "reportsDir" "reports" "$ROOT_DIR"
 }
 
 logs_dir() {
-  local configured_dir
-
-  configured_dir="$(sf_config_factory_value "$CONFIG_FILE" "logsDir" "logs")"
-
-  if [[ "$configured_dir" = /* ]]; then
-    printf '%s\n' "$configured_dir"
-  else
-    printf '%s/%s\n' "$ROOT_DIR" "$configured_dir"
-  fi
+  sf_config_factory_dir "$CONFIG_FILE" "logsDir" "logs" "$ROOT_DIR"
 }
 
 next_report_path() {
@@ -336,9 +346,26 @@ generate_report() {
   fi
 
   report_directory="$(report_dir)"
-  mkdir -p "$report_directory"
   report_path="$(next_report_path "$report_directory")"
 
+  if [[ "$dry_run" == "true" ]]; then
+    info "would write report: $report_path"
+    info "would summarize ${#rows[@]} enabled project(s)"
+    for row in "${rows[@]}"; do
+      local name=""
+      local enabled=""
+      local path=""
+      local goal_file=""
+      local branch_prefix=""
+      local validation_count=""
+
+      IFS=$'\t' read -r name enabled path goal_file branch_prefix validation_count <<<"$row"
+      printf '[INFO] would include %s (%s)\n' "$name" "$(sf_config_expand_path "$path")"
+    done
+    return
+  fi
+
+  mkdir -p "$report_directory" || die "could not create report directory: $report_directory"
   write_report_header "${#rows[@]}"
 
   for row in "${rows[@]}"; do
@@ -359,7 +386,11 @@ main() {
   require_config
   generate_report
 
-  info "wrote report: $report_path"
+  if [[ "$dry_run" == "true" ]]; then
+    info "dry run complete; no report was written"
+  else
+    info "wrote report: $report_path"
+  fi
 }
 
 main "$@"

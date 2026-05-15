@@ -104,6 +104,22 @@ sf_config_factory_value() {
   ' "$config_file"
 }
 
+sf_config_factory_dir() {
+  local config_file="$1"
+  local key="$2"
+  local default_value="$3"
+  local root_dir="$4"
+  local configured_dir
+
+  configured_dir="$(sf_config_factory_value "$config_file" "$key" "$default_value")"
+
+  if [[ "$configured_dir" = /* ]]; then
+    printf '%s\n' "$configured_dir"
+  else
+    printf '%s/%s\n' "$root_dir" "$configured_dir"
+  fi
+}
+
 sf_config_project_row_by_name() {
   local config_file="$1"
   local project_name="$2"

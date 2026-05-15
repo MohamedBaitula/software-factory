@@ -35,6 +35,11 @@ Examples:
   ./scripts/run-project.sh --dry-run homebase
   ./scripts/run-project.sh homebase
 
+Exit codes:
+  0  project was launched or an existing tmux window was reused
+  1  blocking setup, config, Git, branch, tmux, or Codex failure
+  2  invalid command-line usage
+
 Before your first run:
   cp factory.config.example.yaml factory.config.yaml
   edit factory.config.yaml for your local projects
@@ -54,6 +59,11 @@ die() {
   exit 1
 }
 
+usage_error() {
+  printf '[FAIL] %s\n' "$1" >&2
+  exit 2
+}
+
 parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -67,12 +77,12 @@ parse_args() {
         ;;
       -*)
         usage
-        die "unknown option: $1"
+        usage_error "unknown option: $1"
         ;;
       *)
         if [[ -n "$project_name" ]]; then
           usage
-          die "only one project name can be provided"
+          usage_error "only one project name can be provided"
         fi
         project_name="$1"
         shift
@@ -82,7 +92,7 @@ parse_args() {
 
   if [[ -z "$project_name" ]]; then
     usage
-    die "missing project name"
+    usage_error "missing project name"
   fi
 }
 
@@ -166,6 +176,24 @@ load_runtime_settings() {
   attach_command="tmux attach -t $tmux_session"
 }
 
+validate_codex_command() {
+  local command_name
+
+  read -r command_name _ <<<"$codex_command"
+
+  if [[ -z "$command_name" ]]; then
+    die "codexCommand is empty in factory.config.yaml"
+  fi
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    die "configured codexCommand is not available on PATH: $command_name"
+  fi
+
+  if [[ "$command_name" == "codex" ]] && ! codex --version >/dev/null 2>&1; then
+    die "codex was found but could not run. Install Linux-native Node/Codex inside WSL."
+  fi
+}
+
 prepare_branch() {
   local date_stamp
   local slug
@@ -194,6 +222,14 @@ tmux_window_exists() {
   local window="$2"
 
   tmux list-windows -t "$session" -F '#W' 2>/dev/null | grep -Fxq "$window"
+}
+
+handle_existing_tmux_window() {
+  if tmux has-session -t "$tmux_session" 2>/dev/null && tmux_window_exists "$tmux_session" "$window_name"; then
+    ok "tmux window already exists: $window_name"
+    printf '\nReusing existing window. Attach with:\n  %s\n' "$attach_command"
+    exit 0
+  fi
 }
 
 send_startup_to_tmux() {
@@ -253,6 +289,8 @@ main() {
   validate_project_config
   validate_project_repo
   load_runtime_settings
+  validate_codex_command
+  handle_existing_tmux_window
   prepare_branch
   start_tmux
 }
