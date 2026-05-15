@@ -8,6 +8,9 @@ ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="$ROOT_DIR/factory.config.yaml"
 EXAMPLE_CONFIG_FILE="$ROOT_DIR/factory.config.example.yaml"
 
+# shellcheck source=lib/config.sh
+source "$SCRIPT_DIR/lib/config.sh"
+
 failures=0
 warnings=0
 
@@ -25,7 +28,7 @@ Checks:
   - local config file: factory.config.yaml
   - configured project paths
   - configured project Git repositories
-  - clean Git working trees for configured projects
+  - clean Git working trees for enabled projects
 
 Before your first run:
   cp factory.config.example.yaml factory.config.yaml
@@ -106,107 +109,6 @@ check_optional_tool() {
   fi
 }
 
-trim() {
-  local value="$1"
-  value="${value#"${value%%[![:space:]]*}"}"
-  value="${value%"${value##*[![:space:]]}"}"
-  printf '%s' "$value"
-}
-
-parse_projects() {
-  local config_file="$1"
-
-  awk '
-    function trim(s) {
-      gsub(/^[ \t]+|[ \t]+$/, "", s)
-      gsub(/^"|"$/, "", s)
-      return s
-    }
-
-    function flush_project() {
-      if (seen_project) {
-        printf "%s\t%s\t%s\t%s\t%s\n", name, path, goal_file, branch_prefix, validation_count
-      }
-    }
-
-    /^projects:[ \t]*$/ {
-      in_projects = 1
-      next
-    }
-
-    in_projects && /^[^ \t-][^:]*:/ {
-      in_projects = 0
-      in_validation = 0
-      next
-    }
-
-    !in_projects {
-      next
-    }
-
-    /^[ \t]*-[ \t]+name:[ \t]*/ {
-      flush_project()
-      seen_project = 1
-      name = $0
-      sub(/^[ \t]*-[ \t]+name:[ \t]*/, "", name)
-      name = trim(name)
-      path = ""
-      goal_file = ""
-      branch_prefix = ""
-      validation_count = 0
-      in_validation = 0
-      next
-    }
-
-    !seen_project {
-      next
-    }
-
-    /^[ \t]+path:[ \t]*/ {
-      path = $0
-      sub(/^[ \t]+path:[ \t]*/, "", path)
-      path = trim(path)
-      in_validation = 0
-      next
-    }
-
-    /^[ \t]+goalFile:[ \t]*/ {
-      goal_file = $0
-      sub(/^[ \t]+goalFile:[ \t]*/, "", goal_file)
-      goal_file = trim(goal_file)
-      in_validation = 0
-      next
-    }
-
-    /^[ \t]+branchPrefix:[ \t]*/ {
-      branch_prefix = $0
-      sub(/^[ \t]+branchPrefix:[ \t]*/, "", branch_prefix)
-      branch_prefix = trim(branch_prefix)
-      in_validation = 0
-      next
-    }
-
-    /^[ \t]+validation:[ \t]*$/ {
-      in_validation = 1
-      next
-    }
-
-    in_validation && /^[ \t]+-[ \t]+/ {
-      validation_count++
-      next
-    }
-
-    /^[ \t]+[A-Za-z0-9_-]+:[ \t]*/ {
-      in_validation = 0
-      next
-    }
-
-    END {
-      flush_project()
-    }
-  ' "$config_file"
-}
-
 check_config_file() {
   section "Config"
 
@@ -229,11 +131,14 @@ check_config_file() {
 
 check_project_entry() {
   local name="$1"
-  local path="$2"
-  local goal_file="$3"
-  local branch_prefix="$4"
-  local validation_count="$5"
+  local enabled="$2"
+  local path="$3"
+  local goal_file="$4"
+  local branch_prefix="$5"
+  local validation_count="$6"
   local label="$name"
+  local expanded_path=""
+  local schema_failed=0
 
   if [[ -z "$label" ]]; then
     label="<unnamed project>"
@@ -243,25 +148,39 @@ check_project_entry() {
 
   if [[ -z "$name" ]]; then
     fail "project is missing required field: name"
+    schema_failed=1
   else
     pass "name is set ($name)"
   fi
 
-  if [[ -z "$path" ]]; then
-    fail "$label is missing required field: path"
-    return
+  if [[ -z "$enabled" ]]; then
+    fail "$label is missing required field: enabled"
+    schema_failed=1
+  elif sf_config_is_valid_enabled "$enabled"; then
+    pass "enabled is set ($enabled)"
+  else
+    fail "$label has invalid enabled value: $enabled (use true or false)"
+    schema_failed=1
   fi
 
-  pass "path is set ($path)"
+  if [[ -z "$path" ]]; then
+    fail "$label is missing required field: path"
+    schema_failed=1
+  else
+    expanded_path="$(sf_config_expand_path "$path")"
+    pass "path is set ($path)"
+  fi
 
   if [[ -z "$goal_file" ]]; then
     fail "$label is missing required field: goalFile"
+    schema_failed=1
   else
     pass "goalFile is set ($goal_file)"
   fi
 
   if [[ -z "$branch_prefix" ]]; then
     fail "$label is missing required field: branchPrefix"
+    schema_failed=1
   else
     pass "branchPrefix is set ($branch_prefix)"
   fi
@@ -270,23 +189,33 @@ check_project_entry() {
     pass "validation has $validation_count command(s)"
   else
     fail "$label must define at least one validation command"
+    schema_failed=1
   fi
 
-  if [[ ! -d "$path" ]]; then
-    fail "$label path does not exist: $path"
+  if [[ "$schema_failed" -ne 0 ]]; then
+    return
+  fi
+
+  if ! sf_config_is_enabled "$enabled"; then
+    pass "$label is disabled; skipping repo readiness checks"
+    return
+  fi
+
+  if [[ ! -d "$expanded_path" ]]; then
+    fail "$label path does not exist: $expanded_path"
     return
   fi
 
   pass "$label path exists"
 
-  if ! git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    fail "$label path is not a Git repository: $path"
+  if ! git -C "$expanded_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    fail "$label path is not a Git repository: $expanded_path"
     return
   fi
 
   pass "$label is a Git repository"
 
-  if [[ -n "$(git -C "$path" status --porcelain)" ]]; then
+  if [[ -n "$(git -C "$expanded_path" status --porcelain)" ]]; then
     fail "$label has uncommitted changes"
   else
     pass "$label working tree is clean"
@@ -296,10 +225,11 @@ check_project_entry() {
 check_projects() {
   local project_rows=()
   local row
+  local enabled_count=0
 
   section "Projects"
 
-  mapfile -t project_rows < <(parse_projects "$CONFIG_FILE")
+  mapfile -t project_rows < <(sf_config_project_rows "$CONFIG_FILE")
 
   if [[ "${#project_rows[@]}" -eq 0 ]]; then
     fail "no projects were found in factory.config.yaml"
@@ -310,15 +240,23 @@ check_projects() {
 
   for row in "${project_rows[@]}"; do
     local name=""
+    local enabled=""
     local path=""
     local goal_file=""
     local branch_prefix=""
     local validation_count="0"
 
-    IFS=$'\t' read -r name path goal_file branch_prefix validation_count <<<"$row"
-    validation_count="$(trim "$validation_count")"
-    check_project_entry "$name" "$path" "$goal_file" "$branch_prefix" "$validation_count"
+    IFS=$'\t' read -r name enabled path goal_file branch_prefix validation_count <<<"$row"
+    validation_count="$(sf_config_trim "$validation_count")"
+
+    if sf_config_is_enabled "$enabled"; then
+      enabled_count=$((enabled_count + 1))
+    fi
+
+    check_project_entry "$name" "$enabled" "$path" "$goal_file" "$branch_prefix" "$validation_count"
   done
+
+  pass "found $enabled_count enabled project(s)"
 }
 
 main() {

@@ -55,6 +55,8 @@ cp factory.config.example.yaml factory.config.yaml
 
 Then edit `factory.config.yaml` so each project points to a real local repository on your machine.
 
+See [docs/configuration.md](docs/configuration.md) for the supported config fields and examples.
+
 ## Environment Doctor
 
 Run the doctor before an overnight session:
@@ -70,7 +72,7 @@ The doctor checks:
 3. Whether `factory.config.yaml` exists.
 4. Whether configured project paths exist.
 5. Whether configured projects are Git repositories.
-6. Whether configured projects have clean working trees.
+6. Whether enabled projects have clean working trees.
 
 Exit codes:
 
