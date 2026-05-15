@@ -39,9 +39,52 @@ AI coding tools are powerful, but one-off prompts are hard to manage across many
 - Bash scripts for the MVP
 - YAML project configuration
 
+## Getting Started
+
+Software Factory is designed to run from WSL:
+
+```bash
+cd ~/projects/software-factory
+```
+
+Before the first run, create a local config file:
+
+```bash
+cp factory.config.example.yaml factory.config.yaml
+```
+
+Then edit `factory.config.yaml` so each project points to a real local repository on your machine.
+
+## Environment Doctor
+
+Run the doctor before an overnight session:
+
+```bash
+./scripts/doctor.sh
+```
+
+The doctor checks:
+
+1. Required tools: `git`, `tmux`, `codex`, `node`, and `npm`.
+2. Optional tools: `pnpm`, `gh`, and `shellcheck`.
+3. Whether `factory.config.yaml` exists.
+4. Whether configured project paths exist.
+5. Whether configured projects are Git repositories.
+6. Whether configured projects have clean working trees.
+
+Exit codes:
+
+- `0`: ready to run.
+- non-zero: at least one blocking failure needs to be fixed.
+
+For help:
+
+```bash
+./scripts/doctor.sh --help
+```
+
 ## Project Status
 
 This project is in early MVP planning and setup.
 
 See [docs/product-spec.md](docs/product-spec.md) for the current product spec.
-
