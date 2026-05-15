@@ -85,6 +85,37 @@ For help:
 ./scripts/doctor.sh --help
 ```
 
+## Single Project Runner
+
+Use the single-project runner when you want to start one configured project:
+
+```bash
+./scripts/run-project.sh --dry-run homebase
+```
+
+If the dry run looks right, start the project run:
+
+```bash
+./scripts/run-project.sh homebase
+```
+
+The runner:
+
+1. Reads the project from `factory.config.yaml`.
+2. Blocks disabled or misconfigured projects.
+3. Verifies the project path is a Git repository.
+4. Blocks projects with uncommitted changes.
+5. Creates a branch like `codex/night-YYYY-MM-DD-homebase`.
+6. Verifies the configured goal file exists.
+7. Starts or reuses the configured tmux session.
+8. Creates a tmux window and starts Codex in the project folder.
+
+After launch, attach to the session:
+
+```bash
+tmux attach -t software-factory
+```
+
 ## Project Status
 
 This project is in early MVP planning and setup.
