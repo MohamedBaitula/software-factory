@@ -1,194 +1,147 @@
 # Software Factory
 
-Software Factory is a local AI development orchestration system for running safe, reviewable Codex goal sessions across multiple repositories.
+Software Factory is a local AI development orchestrator for running safe,
+reviewable Codex sessions across multiple repositories.
 
-It is inspired by the idea of a self-driving codebase: humans define intent, constraints, and review standards; AI agents execute scoped development work inside isolated Git branches and tmux sessions.
+It is built for a simple workflow: write clear goals before bed, launch isolated
+Codex sessions in tmux, and review branches, logs, validation output, and
+reports in the morning.
 
 ## What It Does
 
-The MVP will:
+- Registers local projects in `factory.config.yaml`.
+- Checks WSL, Git, tmux, Codex, Node, npm, config, project paths, and clean Git state.
+- Runs one project or many enabled projects in tmux.
+- Supports a private local goal queue under `goals/`.
+- Records run IDs and per-project status under `logs/runs/`.
+- Imports GitHub Issues into local goal files.
+- Verifies projects with configured validation commands.
+- Generates morning reports, metrics, and a local HTML dashboard.
+- Helps prepare draft pull requests without auto-merging or deploying.
+- Uses agent role templates for feature building, bug fixing, refactoring, testing, verification, and reporting.
 
-1. Read a config file of local projects.
-2. Check that the environment is ready.
-3. Verify each project has a clean Git working tree.
-4. Create a dedicated branch for each run.
-5. Launch one tmux window per project.
-6. Start Codex CLI with a structured goal prompt.
-7. Track validation commands and run status.
-8. Produce a morning review report.
+## Safety Model
 
-## Why This Exists
-
-AI coding tools are powerful, but one-off prompts are hard to manage across many projects. Software Factory turns AI-assisted coding into a repeatable workflow with safety rules, project configuration, validation, and review summaries.
-
-## Safety Principles
+Software Factory is designed to keep the human in control.
 
 - Work happens on dedicated branches.
-- Existing uncommitted changes are protected.
-- Code is not pushed automatically.
-- Production deploys are out of scope.
-- Ambiguous product decisions require human review.
-- Every run should leave a clear summary.
+- Dirty working trees block automated starts.
+- Local config and local goals are ignored by Git.
+- Secrets, destructive migrations, production deployment, auto-merge, and auto-deploy are out of scope.
+- Validation failures are recorded instead of hidden.
+- Morning reports recommend review actions instead of making merge decisions.
 
-## Planned Stack
+## Quick Start
 
-- WSL Ubuntu
-- tmux
-- Codex CLI
-- Git and GitHub
-- Bash scripts for the MVP
-- YAML project configuration
-
-## Getting Started
-
-Software Factory is designed to run from WSL:
+Install or verify Linux-native Codex in WSL:
 
 ```bash
-cd ~/projects/software-factory
+./scripts/setup-wsl-codex.sh
+codex login
 ```
 
-Before the first run, create a local config file:
+Create your private local config:
 
 ```bash
 cp factory.config.example.yaml factory.config.yaml
+nvim factory.config.yaml
 ```
 
-Then edit `factory.config.yaml` so each project points to a real local repository on your machine.
+Add any local repositories you want Software Factory to manage. Each project gets
+its own name, path, goal file, branch prefix, agent role, and validation
+commands.
 
-See [docs/configuration.md](docs/configuration.md) for the supported config fields and examples.
-
-If a command fails, see [docs/troubleshooting.md](docs/troubleshooting.md) for common errors and expected output examples.
-
-## Environment Doctor
-
-Run the doctor before an overnight session:
+Check readiness:
 
 ```bash
 ./scripts/doctor.sh
 ```
 
-The doctor checks:
-
-1. Required tools: `git`, `tmux`, `codex`, `node`, and `npm`.
-2. Optional tools: `pnpm`, `gh`, and `shellcheck`.
-3. Whether `factory.config.yaml` exists.
-4. Whether configured project paths exist.
-5. Whether configured projects are Git repositories.
-6. Whether enabled projects have clean working trees.
-
-Exit codes:
-
-- `0`: ready to run.
-- non-zero: at least one blocking failure needs to be fixed.
-
-For help:
+Preview one project:
 
 ```bash
-./scripts/doctor.sh --help
+./scripts/run-project.sh --dry-run my-project
 ```
 
-## Single Project Runner
-
-Use the single-project runner when you want to start one configured project:
+Launch one project:
 
 ```bash
-./scripts/run-project.sh --dry-run homebase
+./scripts/run-project.sh my-project
 ```
 
-If the dry run looks right, start the project run:
-
-```bash
-./scripts/run-project.sh homebase
-```
-
-The runner:
-
-1. Reads the project from `factory.config.yaml`.
-2. Blocks disabled or misconfigured projects.
-3. Verifies the project path is a Git repository.
-4. Blocks projects with uncommitted changes.
-5. Creates a branch like `codex/night-YYYY-MM-DD-homebase`.
-6. Verifies the configured goal file exists.
-7. Starts or reuses the configured tmux session.
-8. Creates a tmux window and starts Codex in the project folder.
-
-After launch, attach to the session:
-
-```bash
-tmux attach -t software-factory
-```
-
-## Overnight Runner
-
-Use the night runner when you want to launch every enabled project:
-
-```bash
-./scripts/run-night.sh --dry-run
-```
-
-If the dry run looks right, start the overnight run:
+Launch every enabled project:
 
 ```bash
 ./scripts/run-night.sh
 ```
 
-The night runner:
-
-1. Reads all projects from `factory.config.yaml`.
-2. Skips projects with `enabled: false`.
-3. Calls `scripts/run-project.sh` for each enabled project.
-4. Uses one shared tmux session.
-5. Uses one tmux window per project.
-6. Continues to the next project if one project fails.
-7. Prints a final launch summary and attach command.
-
-Attach to the running factory:
-
-```bash
-tmux attach -t software-factory
-```
-
-## Morning Review
-
-After a run, generate a morning report:
+Review in the morning:
 
 ```bash
 ./scripts/summarize.sh
+./scripts/update-metrics.sh
+./scripts/dashboard.sh
 ```
 
-Preview the report without writing a file:
+## Goal Queue
+
+Create local goals under `goals/queue/`. These files are private and ignored by
+Git.
 
 ```bash
-./scripts/summarize.sh --dry-run
+./scripts/list-goals.sh
+./scripts/run-goal.sh goals/queue/my-project-goal.md
+./scripts/run-ready-goals.sh --dry-run
 ```
 
-The report is written under `reports/` with a name like:
+See `goals/examples/example-goal.md` for the format.
 
-```txt
-reports/morning-YYYY-MM-DD.md
-```
+## GitHub Issue Workflow
 
-If a report already exists for that date, the script creates the next available filename instead of overwriting it.
-
-The report includes:
-
-1. Project name and path.
-2. Current branch.
-3. Whether the working tree is clean or dirty.
-4. Changed files.
-5. Recent commits.
-6. Diff stats.
-7. Validation status when a matching log/status file exists.
-8. Recommended next action.
-
-For help:
+If a project has `githubRepo` and `issueLabels` in config, issues can become
+local goals:
 
 ```bash
-./scripts/summarize.sh --help
+./scripts/list-issues.sh my-project
+./scripts/import-issue.sh my-project 12
 ```
 
-## Project Status
+The factory does not pick vague or blocked issues automatically.
 
-This project is in early MVP planning and setup.
+## Verification And PR Prep
 
-See [docs/product-spec.md](docs/product-spec.md) for the current product spec.
+Run project validation and save logs:
+
+```bash
+./scripts/verify-project.sh my-project
+```
+
+Prepare a draft PR after validation passes:
+
+```bash
+./scripts/prepare-pr.sh my-project
+```
+
+This does not auto-merge and does not deploy.
+
+## Command Center
+
+Most commands are also available through one entry point:
+
+```bash
+./scripts/factory.sh doctor
+./scripts/factory.sh goals
+./scripts/factory.sh run-ready --dry-run
+./scripts/factory.sh summarize
+./scripts/factory.sh update-metrics
+./scripts/factory.sh dashboard
+```
+
+## Documentation
+
+- [Product spec](docs/product-spec.md)
+- [Architecture](docs/architecture.md)
+- [Configuration](docs/configuration.md)
+- [v2 workflow](docs/v2-workflow.md)
+- [Scheduling](docs/scheduling.md)
+- [Troubleshooting](docs/troubleshooting.md)
