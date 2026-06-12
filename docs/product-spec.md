@@ -12,7 +12,7 @@ The first target user is a student/developer managing several personal projects 
 
 ## MVP
 
-The MVP should support:
+The first MVP supports:
 
 1. Registering multiple local projects in a config file.
 2. Checking the local environment before any run starts.
@@ -23,6 +23,22 @@ The MVP should support:
 7. Running or recording each project's validation commands.
 8. Producing a morning report with status, changed files, tests run, and next steps.
 
+## v2 Scope
+
+The v2 local factory expands the MVP with:
+
+1. Run IDs and durable local run logs.
+2. A local goal queue.
+3. GitHub Issue import into local goals.
+4. Draft PR preparation after validation passes.
+5. Project knowledge templates for AI agents.
+6. Agent role templates.
+7. Verification logs.
+8. Metrics output.
+9. A local dashboard.
+10. Scheduled run helper scripts.
+11. A unified command center.
+
 ## Non-Goals
 
 The MVP will not:
@@ -32,7 +48,9 @@ The MVP will not:
 3. Modify secrets or environment files.
 4. Run destructive database migrations without human approval.
 5. Replace human review.
-6. Provide a web dashboard.
+6. Provide a hosted or production web dashboard.
+7. Auto-merge pull requests.
+8. Auto-deploy code.
 
 ## Safety Rules
 
@@ -59,4 +77,3 @@ Possible future additions:
 4. Scheduled runs.
 5. Per-project agent instructions.
 6. Metrics for success rate, test pass rate, and time saved.
-

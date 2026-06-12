@@ -1,45 +1,40 @@
 # Roadmap
 
-## Milestone 1: Repo Foundation
+## Completed
 
-- Create repository structure
-- Write README
-- Write product spec
-- Add config example
-- Add reusable templates
+### v1 Local MVP
 
-## Milestone 2: Environment Doctor
+- Repo foundation.
+- Environment doctor.
+- Local config workflow.
+- Single-project runner.
+- Multi-project night runner.
+- Morning report generator.
+- Safety and developer experience polish.
 
-- Check required tools: git, tmux, codex, node, npm
-- Verify project paths exist
-- Verify project Git working trees are clean
-- Print clear pass/fail output
+### v2 Local Software Factory
 
-## Milestone 3: Single Project Runner
+- Linux-native WSL Codex setup helper.
+- Run IDs and run logs.
+- Local goal queue.
+- GitHub Issue import into local goals.
+- Draft PR preparation.
+- Project knowledge templates.
+- Verification layer.
+- Metrics output.
+- Local HTML dashboard.
+- Scheduled run helper.
+- Agent role templates.
+- Unified command center.
 
-- Read one project from config
-- Create a dedicated branch
-- Start a tmux window
-- Launch Codex CLI in the project folder
-- Use the project's goal file
+## Future Ideas
 
-## Milestone 4: Multi-Project Night Runner
-
-- Loop through configured projects
-- Start one tmux session
-- Create one tmux window per project
-- Launch each project run independently
-
-## Milestone 5: Morning Summary
-
-- Collect branch, status, changed files, and recent commits
-- Generate a Markdown report
-- Save reports under `reports/`
-
-## Milestone 6: Polish
-
-- Add screenshots or terminal demo
-- Add architecture diagram
-- Add example run
-- Prepare resume bullets
+- Replace the Bash YAML subset with a stricter parser.
+- Add richer validation log parsing.
+- Add optional web server mode for the dashboard.
+- Add GitHub Actions integration.
+- Add issue-to-PR traceability reports.
+- Add safer per-project permission profiles.
+- Add automatic screenshot or browser verification for frontend projects.
+- Add more detailed run analytics over time.
 

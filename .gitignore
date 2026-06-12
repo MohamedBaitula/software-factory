@@ -4,12 +4,23 @@ factory.config.yaml
 # Generated run output
 logs/*
 reports/*
+metrics/*
 
 # Keep directories
 !logs/.gitkeep
 !reports/.gitkeep
+!metrics/.gitkeep
+
+# Private local goal queue
+goals/queue/*
+goals/running/*
+goals/completed/*
+goals/blocked/*
+!goals/queue/.gitkeep
+!goals/running/.gitkeep
+!goals/completed/.gitkeep
+!goals/blocked/.gitkeep
 
 # OS/editor noise
 .DS_Store
 *.swp
-

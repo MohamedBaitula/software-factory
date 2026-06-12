@@ -268,3 +268,150 @@ sf_config_enabled_project_rows() {
     fi
   done < <(sf_config_project_rows "$config_file")
 }
+
+sf_config_project_names() {
+  local config_file="$1"
+  local row
+
+  while IFS= read -r row; do
+    local name=""
+    local enabled=""
+    local path=""
+    local goal_file=""
+    local branch_prefix=""
+    local validation_count=""
+
+    IFS=$'\t' read -r name enabled path goal_file branch_prefix validation_count <<<"$row"
+    printf '%s\n' "$name"
+  done < <(sf_config_project_rows "$config_file")
+}
+
+sf_config_project_value_by_name() {
+  local config_file="$1"
+  local project_name="$2"
+  local key="$3"
+  local default_value="${4:-}"
+
+  awk -v project_name="$project_name" -v key="$key" -v default_value="$default_value" '
+    function trim(s) {
+      sub(/[ \t]*#.*/, "", s)
+      gsub(/^[ \t]+|[ \t]+$/, "", s)
+      gsub(/^"|"$/, "", s)
+      gsub(/^'\''|'\''$/, "", s)
+      return s
+    }
+
+    function finish_if_found() {
+      if (target && found) {
+        exit
+      }
+    }
+
+    /^projects:[ \t]*($|#)/ {
+      in_projects = 1
+      next
+    }
+
+    in_projects && /^[^ \t-][^:]*:/ {
+      in_projects = 0
+      target = 0
+      next
+    }
+
+    !in_projects {
+      next
+    }
+
+    /^[ \t]*-[ \t]+name:[ \t]*/ {
+      finish_if_found()
+      current_name = $0
+      sub(/^[ \t]*-[ \t]+name:[ \t]*/, "", current_name)
+      current_name = trim(current_name)
+      target = (current_name == project_name)
+      next
+    }
+
+    target {
+      line = $0
+      sub(/^[ \t]+/, "", line)
+
+      if (line ~ "^" key ":[ \t]*") {
+        sub("^[^:]+:[ \t]*", "", line)
+        print trim(line)
+        found = 1
+        exit
+      }
+    }
+
+    END {
+      if (!found) {
+        print default_value
+      }
+    }
+  ' "$config_file"
+}
+
+sf_config_project_list_values_by_name() {
+  local config_file="$1"
+  local project_name="$2"
+  local key="$3"
+
+  awk -v project_name="$project_name" -v key="$key" '
+    function trim(s) {
+      sub(/[ \t]*#.*/, "", s)
+      gsub(/^[ \t]+|[ \t]+$/, "", s)
+      gsub(/^"|"$/, "", s)
+      gsub(/^'\''|'\''$/, "", s)
+      return s
+    }
+
+    /^projects:[ \t]*($|#)/ {
+      in_projects = 1
+      next
+    }
+
+    in_projects && /^[^ \t-][^:]*:/ {
+      in_projects = 0
+      target = 0
+      in_list = 0
+      next
+    }
+
+    !in_projects {
+      next
+    }
+
+    /^[ \t]*-[ \t]+name:[ \t]*/ {
+      current_name = $0
+      sub(/^[ \t]*-[ \t]+name:[ \t]*/, "", current_name)
+      current_name = trim(current_name)
+      target = (current_name == project_name)
+      in_list = 0
+      next
+    }
+
+    target && $0 ~ "^[ \t]+" key ":[ \t]*($|#)" {
+      in_list = 1
+      next
+    }
+
+    target && in_list && /^[ \t]+-[ \t]+/ {
+      value = $0
+      sub(/^[ \t]+-[ \t]+/, "", value)
+      print trim(value)
+      next
+    }
+
+    target && in_list && /^[ \t]+[A-Za-z0-9_-]+:[ \t]*/ {
+      in_list = 0
+      next
+    }
+  ' "$config_file"
+}
+
+sf_config_project_validation_commands() {
+  local config_file="$1"
+  local project_name="$2"
+
+  sf_config_project_list_values_by_name "$config_file" "$project_name" "validation"
+}
