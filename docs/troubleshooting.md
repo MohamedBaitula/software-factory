@@ -44,8 +44,9 @@ This usually means WSL is finding a Windows Codex/npm shim, but Linux Node is mi
 Fix Linux-native Node first, then install or verify Codex inside WSL:
 
 ```bash
-node --version
-codex --version
+./scripts/setup-wsl-codex.sh
+codex login
+./scripts/doctor.sh
 ```
 
 ### `project has uncommitted changes`
@@ -93,6 +94,47 @@ enabled: true
 ```
 
 Disabled projects are documented but skipped.
+
+### `goal status is blocked or completed`
+
+`run-goal.sh` only runs goals marked `pending`, `ready`, or `running`.
+
+Edit the goal file and change the metadata if you intentionally want to rerun it:
+
+```yaml
+status: pending
+```
+
+### `validation failed`
+
+Validation output is saved under:
+
+```txt
+logs/runs/<run-id>/projects/<project>/validation.log
+```
+
+Open that file, fix the project, then rerun:
+
+```bash
+./scripts/verify-project.sh <project>
+```
+
+### `gh authentication required`
+
+GitHub issue import and draft PR creation use the GitHub CLI.
+
+Run:
+
+```bash
+gh auth login
+gh auth status
+```
+
+### Scheduled run did not continue overnight
+
+tmux can survive closing the terminal, but it cannot survive Windows sleeping,
+hibernating, restarting, or losing power. Keep the machine plugged in and set
+sleep/hibernate to `Never` while scheduled runs are active.
 
 ## Expected Output Examples
 

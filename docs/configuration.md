@@ -33,6 +33,9 @@ Optional fields:
 |---|---|
 | `stopConditions` | Human-readable safety rules for when an agent should pause. |
 | `notes` | Extra context for the project or for your own memory. |
+| `agentRole` | Default role template for this project, such as `feature-builder` or `bug-fixer`. |
+| `githubRepo` | GitHub repo in `owner/repo` format for issue import and PR workflows. |
+| `issueLabels` | Labels used when listing ready GitHub Issues. |
 
 ## Example Project
 
@@ -43,6 +46,11 @@ projects:
     path: /home/mbait/projects/homebase
     goalFile: GOAL.md
     branchPrefix: codex/night
+    agentRole: feature-builder
+    githubRepo: MohamedBaitula/homebase
+    issueLabels:
+      - software-factory
+      - ready
     validation:
       - npm test
       - npm run build
@@ -70,6 +78,7 @@ The MVP intentionally supports a small YAML subset so the scripts can stay Bash-
 3. Use `true` or `false` for `enabled`.
 4. Put validation commands in a list under `validation`.
 5. Avoid tabs in field values.
+6. Keep optional list fields, such as `issueLabels`, in the same indentation style.
 
 If the config grows more complex later, the project can switch to `yq`, JSON, or a small Node-based parser.
 
@@ -82,3 +91,18 @@ Run:
 ```
 
 The doctor checks required fields, project paths, Git repositories, and clean working trees for enabled projects.
+
+## Factory Fields
+
+The `factory` section controls shared runtime behavior:
+
+| Field | Example | Purpose |
+|---|---|---|
+| `tmuxSession` | `software-factory` | Shared tmux session name. |
+| `reportsDir` | `reports` | Generated report directory. |
+| `logsDir` | `logs` | Generated run log directory. |
+| `goalsDir` | `goals` | Local goal queue directory. |
+| `defaultBranchPrefix` | `codex/night` | Default branch prefix for generated branches. |
+| `codexCommand` | `codex` | Command used to start Codex. |
+| `autoStartGoal` | `false` | Whether to send the `/goal` command into tmux automatically. |
+| `goalStartDelaySeconds` | `4` | Delay before sending `/goal` when auto-start is enabled. |

@@ -17,8 +17,11 @@ factory:
   tmuxSession: software-factory
   reportsDir: reports
   logsDir: logs
+  goalsDir: goals
   defaultBranchPrefix: codex/night
   codexCommand: codex
+  autoStartGoal: false
+  goalStartDelaySeconds: 4
 
 projects:
   - name: homebase
@@ -26,6 +29,11 @@ projects:
     path: /home/mbait/projects/homebase
     goalFile: GOAL.md
     branchPrefix: codex/night
+    agentRole: feature-builder
+    githubRepo: MohamedBaitula/homebase
+    issueLabels:
+      - software-factory
+      - ready
     validation:
       - npm test
       - npm run build
@@ -42,6 +50,11 @@ projects:
     path: /home/mbait/projects/teyvatool
     goalFile: GOAL.md
     branchPrefix: codex/night
+    agentRole: bug-fixer
+    githubRepo: MohamedBaitula/teyvatool
+    issueLabels:
+      - software-factory
+      - ready
     validation:
       - npm test
       - npm run build

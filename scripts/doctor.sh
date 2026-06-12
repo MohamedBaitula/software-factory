@@ -8,6 +8,11 @@ ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="$ROOT_DIR/factory.config.yaml"
 EXAMPLE_CONFIG_FILE="$ROOT_DIR/factory.config.example.yaml"
 
+if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$HOME/.nvm/nvm.sh"
+fi
+
 # shellcheck source=lib/config.sh
 source "$SCRIPT_DIR/lib/config.sh"
 
@@ -106,6 +111,27 @@ check_optional_tool() {
     fi
   else
     warn "$tool not found ($why)"
+  fi
+}
+
+check_codex_goals_feature() {
+  local goals_line
+
+  if ! command -v codex >/dev/null 2>&1; then
+    return
+  fi
+
+  goals_line="$(codex features list 2>/dev/null | awk '$1=="goals"{print $0; exit}')"
+
+  if [[ -z "$goals_line" ]]; then
+    warn "could not verify Codex goals feature"
+    return
+  fi
+
+  if printf '%s\n' "$goals_line" | grep -Eq '[[:space:]]true$'; then
+    pass "Codex goals feature is enabled"
+  else
+    fail "Codex goals feature is disabled. Run: codex features enable goals"
   fi
 }
 
@@ -279,6 +305,7 @@ main() {
   check_required_tool codex
   check_required_tool node
   check_required_tool npm
+  check_codex_goals_feature
 
   section "Optional tools"
   check_optional_tool pnpm "useful for projects that use pnpm"

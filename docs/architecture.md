@@ -1,59 +1,89 @@
 # Architecture
 
-Software Factory is a local orchestration layer around Git, tmux, and Codex CLI.
+Software Factory is a local orchestration layer around Git, tmux, Codex CLI,
+GitHub CLI, and project-specific goal files.
 
-## Core Pieces
+## System Flow
 
-## Config
+```mermaid
+flowchart TD
+  A["factory.config.yaml"] --> B["doctor.sh"]
+  A --> C["run-project.sh"]
+  A --> D["run-night.sh"]
+  A --> E["verify-project.sh"]
+  A --> F["summarize.sh"]
+  A --> G["dashboard.sh"]
 
-`factory.config.yaml` defines the projects that can be run by the factory.
+  H["goals/queue/*.md"] --> I["run-goal.sh"]
+  I --> C
+  J["GitHub Issues"] --> K["import-issue.sh"]
+  K --> H
 
-Each project includes:
+  D --> C
+  C --> L["Git branch"]
+  C --> M["tmux window"]
+  M --> N["Codex CLI /goal"]
+  C --> O["logs/runs/<run-id>"]
 
-- project name
-- enabled/disabled status
-- local path
-- goal file
-- branch prefix
-- validation commands
-- stop conditions
+  E --> O
+  F --> P["reports/morning-YYYY-MM-DD.md"]
+  O --> Q["update-metrics.sh"]
+  Q --> R["metrics/summary.md + JSON"]
+  R --> G
+  G --> S["reports/dashboard.html"]
+```
 
-Config parsing lives in `scripts/lib/config.sh` so every script reads project entries the same way.
+## Core Components
 
-## Templates
+### Config
 
-Templates provide reusable instructions for projects and runs:
+`factory.config.yaml` is the private local registry of projects. It defines
+project paths, validation commands, branch prefixes, optional GitHub repos, and
+agent roles.
 
-- `templates/GOAL.md` defines the structure of a scoped task.
-- `templates/AGENTS.md` defines general AI agent working rules.
-- `templates/MORNING_REPORT.md` defines the review format after a run.
+Parsing lives in `scripts/lib/config.sh`. The project intentionally supports a
+small documented YAML subset so the MVP stays inspectable.
 
-## Scripts
+### Goal Queue
 
-The MVP scripts will be:
+Local goals live under `goals/queue/`. A goal contains metadata such as project,
+priority, status, and role, plus the actual objective, scope, validation, stop
+conditions, and delivery expectations.
 
-- `scripts/doctor.sh`: checks required tools and project readiness.
-- `scripts/run-project.sh`: starts one project run.
-- `scripts/run-night.sh`: starts multiple project runs in tmux.
-- `scripts/summarize.sh`: generates a morning report.
+### Run Logs
 
-## Runtime Flow
+Every real run gets an ID like:
 
-1. User writes or updates project goals.
-2. User runs the environment doctor.
-3. Factory checks configured projects.
-4. Factory creates safe branches.
-5. Factory starts tmux windows.
-6. Codex runs inside each project.
-7. Validation commands are run or recorded.
-8. Morning report is generated for review.
+```txt
+run-YYYY-MM-DD-HHMM
+```
 
-## Safety Model
+Run metadata and per-project status are written under:
 
-The factory is designed to keep human review in control.
+```txt
+logs/runs/<run-id>/
+```
 
-- Work happens on branches.
-- Dirty working trees block automated runs.
-- Local config is ignored by Git.
-- Logs and reports are generated locally.
-- Pushing and deployment are not automatic in the MVP.
+### tmux And Codex
+
+`run-project.sh` creates a safe branch, opens a tmux window, starts Codex, and
+prints or sends the `/goal` instruction depending on config.
+
+### Verification
+
+`verify-project.sh` runs configured validation commands and saves output to the
+run log. Failures remain visible and block PR preparation.
+
+### Metrics And Dashboard
+
+`update-metrics.sh` turns run logs into Markdown and JSON. `dashboard.sh` turns
+project config and recent run data into a local static dashboard.
+
+## Safety Boundaries
+
+- No automatic merging.
+- No automatic deployment.
+- No secret or credential editing.
+- No destructive migrations.
+- No overwriting dirty worktrees.
+- No silent overwriting of existing branches, reports, logs, or tmux windows.
